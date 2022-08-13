@@ -24,7 +24,7 @@ __status__ = "Development"
 
 class PdfConvertor(): #add moving pdfs to processed
     def __init__(self):
-        self.pdfs = os.listdir('pdf')
+        self.pdfs = os.listdir('pdfs')
 
     def convert_to_text(self):
         page = 0
@@ -35,14 +35,20 @@ class PdfConvertor(): #add moving pdfs to processed
             for pdf in self.pdfs:
                 try:
                     #print('Opening {0}'.format(pdf))
-                    pdf_text = textract.process(os.path.join('pdf', pdf)).decode('utf-8')
+                    pdf_text = textract.process(os.path.join('pdfs', pdf)).decode('utf-8')
                 except Exception as e:
-                    print (str(e))
+                    print(str(e))
                 finally:
-                    file_text = open(os.path.join('text', pdf + '.txt'), 'a', encoding="utf-8")
+                    file_text = open(os.path.join('texts', pdf + '.txt'), 'a', encoding="utf-8")
                     file_text.writelines(str(pdf_text))
                     
                     file_text.close()
+                
+                try:
+                    os.rename(os.path.join('pdfs', pdf), os.path.join('processed_pdfs', pdf))
+                    os.rename(os.path.join('texts', pdf + '.txt'), os.path.join('processed_texts', pdf + '.txt'))
+                except Exception as e:
+                    print(str(e))
 
 class PdfMetadata():
     def __init__(self):
@@ -147,7 +153,7 @@ def loop():
             "Process PDF to Text",
             "Process Text to CSV",
             "Display CSV",
-            Choice(value=None, name="Exit")
+            Choice(value="Exit", name="Exit")
         ],
         default=None,
     ).execute()
@@ -160,6 +166,9 @@ def loop():
 
     if operation == "Display CSV":
         print("display it")
+
+    if operation == "Exit":
+        quit()
 
 def main():
     loop()
