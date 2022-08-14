@@ -26,7 +26,7 @@ __maintainer__ = "Jason M. Pittman"
 __email__ = "jason.pittman@umgc.edu"
 __status__ = "Development"
 
-class PdfConvertor(): #add moving pdfs to processed
+class PdfConvertor():
     def __init__(self):
         self.pdfs = os.listdir('pdfs')
 
@@ -38,7 +38,6 @@ class PdfConvertor(): #add moving pdfs to processed
         else:
             for pdf in self.pdfs:
                 try:
-                    #print('Opening {0}'.format(pdf))
                     pdf_text = textract.process(os.path.join('pdfs', pdf)).decode('utf-8')
                 except Exception as e:
                     print(str(e))
@@ -75,6 +74,7 @@ class PdfMetadata():
                     metadata[pdf]['title'] = info.title
                     metadata[pdf]['keywords'] = self.__get_keywords(info)
                     
+                    # if we ever want to include the full text here is the statement
                     #metadata['text'] = open(os.path.join('text', pdf + '.txt'), encoding='utf-8').read()
 
                 except Exception as e:
@@ -121,7 +121,7 @@ class PdfAnalyzer():
 
         return keyword_frequency
 
-    def serialize_to_csv(self): # add moving txt to processed after csv created
+    def serialize_to_csv(self):
         metadata = self.pm.get_metadata()
         stamp = time.time()
 
