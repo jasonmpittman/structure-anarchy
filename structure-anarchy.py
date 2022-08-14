@@ -3,10 +3,12 @@
 #
 import os
 import csv
+import time
 from types import NoneType
 
 # 
 import textract
+import pandas as pd
 from PyPDF2 import PdfFileReader
 from InquirerPy import inquirer
 from InquirerPy.base.control import Choice
@@ -44,15 +46,15 @@ class PdfConvertor(): #add moving pdfs to processed
                     
                     file_text.close()
                 
-                try:
-                    os.rename(os.path.join('pdfs', pdf), os.path.join('processed_pdfs', pdf))
-                    os.rename(os.path.join('texts', pdf + '.txt'), os.path.join('processed_texts', pdf + '.txt'))
-                except Exception as e:
-                    print(str(e))
+                #try:
+                    #os.rename(os.path.join('pdfs', pdf), os.path.join('processed_pdfs', pdf))
+                    #os.rename(os.path.join('texts', pdf + '.txt'), os.path.join('processed_texts', pdf + '.txt'))
+                #except Exception as e:
+                #    print(str(e))
 
 class PdfMetadata():
     def __init__(self):
-        self.pdfs = os.listdir('pdf')
+        self.pdfs = os.listdir('pdfs')
 
     def get_metadata(self):
         if len(self.pdfs) == 0:
@@ -64,13 +66,13 @@ class PdfMetadata():
             
             for pdf in self.pdfs:
                 try:
-                    pdf_object = PdfFileReader(os.path.join('pdf', pdf))
+                    pdf_object = PdfFileReader(os.path.join('pdfs', pdf))
                     info = pdf_object.metadata
 
                     metadata[pdf] = {}
                     metadata[pdf]['id'] = pdf 
-                    metadata[pdf]['path'] = os.path.join('text', pdf)
-                    metadata[pdf]['source'] = os.path.join('pdf', pdf)
+                    metadata[pdf]['path'] = os.path.join('texts', pdf)
+                    metadata[pdf]['source'] = os.path.join('pdfs', pdf)
                     metadata[pdf]['author'] = info.author
                     metadata[pdf]['title'] = info.title
                     metadata[pdf]['keywords'] = self.__get_keywords(info)
@@ -88,7 +90,7 @@ class PdfMetadata():
 
 
     def get_abstract(self, pdf):
-        pdf_text = open(os.path.join('text', pdf + '.txt'), encoding='utf-8').read()
+        pdf_text = open(os.path.join('texts', pdf + '.txt'), encoding='utf-8').read()
 
         abstract = pdf_text.split("ABSTRACT")[1].split("INTRODUCTION")[0]
 
@@ -99,7 +101,7 @@ class PdfAnalyzer():
         self.pm = PdfMetadata()
 
     def get_page_count(self, pdf):
-        with open(os.path.join('pdf', pdf), 'rb') as pdf_object:
+        with open(os.path.join('pdfs', pdf), 'rb') as pdf_object:
             pdf_file = PdfFileReader(pdf_object)
             page_count = pdf_file.numPages
 
@@ -122,12 +124,13 @@ class PdfAnalyzer():
 
     def serialize_to_csv(self): # add moving txt to processed after csv created
         metadata = self.pm.get_metadata()
+        stamp = time.time()
 
         if metadata != 0: 
             csv_header = ['id', 'authors', 'title', 'keywords', 'frequency']
             rows = []
 
-            with open(os.path.join('data', 'pdf_metadata.csv'), 'w') as f:
+            with open(os.path.join('data', 'pdf_metadata' + str(stamp) + '.csv'), 'w') as f:
                 writer = csv.writer(f)
                 writer.writerow(csv_header)
 
@@ -136,7 +139,7 @@ class PdfAnalyzer():
                     if metadata[entry]['keywords'] == '':
                         frequency = 0
                     else:
-                        frequency = self.get_pdf_keyword_frequency(metadata[entry]['keywords'], metadata[entry]['path'])
+                        frequency = self.get_pdf_keyword_frequency(metadata[entry]['keywords'], metadata[entry]['path']) #need to fix this
 
                     row = [metadata[entry]['id'], metadata[entry]['author'], metadata[entry]['title'], metadata[entry]['keywords'], frequency]
                     rows.append(row)
@@ -145,6 +148,13 @@ class PdfAnalyzer():
         else:
             pass
 
+class Display():
+    def __init__(self):
+        pass
+        
+    #df = pd.read_csv(file)
+    #pd.options.display.max_columns = len(df.columns)
+    #print(df)
 
 def loop():
     operation = inquirer.select(
@@ -159,10 +169,14 @@ def loop():
     ).execute()
 
     if operation == "Process PDF to Text":
-        print("convert pdfs")
+        print("Converting pdfs to text files...")
+        convertor = PdfConvertor()
+        convertor.convert_to_text()
 
     if operation == "Process Text to CSV":
-        print("convert to csv")
+        print("Converting to csv")
+        processor = PdfAnalyzer()
+        processor.serialize_to_csv()
 
     if operation == "Display CSV":
         print("display it")
