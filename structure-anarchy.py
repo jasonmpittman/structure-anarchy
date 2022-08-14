@@ -9,9 +9,11 @@ from types import NoneType
 # 
 import textract
 import pandas as pd
+from tabulate import tabulate
 from PyPDF2 import PdfFileReader
 from InquirerPy import inquirer
 from InquirerPy.base.control import Choice
+from InquirerPy.validator import PathValidator
 from InquirerPy.separator import Separator
 
 
@@ -46,11 +48,7 @@ class PdfConvertor(): #add moving pdfs to processed
                     
                     file_text.close()
                 
-                #try:
-                    #os.rename(os.path.join('pdfs', pdf), os.path.join('processed_pdfs', pdf))
-                    #os.rename(os.path.join('texts', pdf + '.txt'), os.path.join('processed_texts', pdf + '.txt'))
-                #except Exception as e:
-                #    print(str(e))
+
 
 class PdfMetadata():
     def __init__(self):
@@ -107,15 +105,16 @@ class PdfAnalyzer():
 
         return page_count
 
-    def get_pdf_keyword_frequency(self, keywords, text): #need to fix this so 
+    def get_pdf_keyword_frequency(self, keywords, text):
         keyword_frequency = {}
 
         with open(text + '.txt', 'r') as text_object:
             text_file = text_object.read().lower()
-        #print(keywords)
-        
+
         if keywords is not None:
-            for word in keywords:
+            words = keywords.split(',')
+            
+            for word in words:
                 keyword_frequency[word] = text_file.count(word.lower())
         else:
             keyword_frequency = ''
@@ -139,7 +138,7 @@ class PdfAnalyzer():
                     if metadata[entry]['keywords'] == '':
                         frequency = 0
                     else:
-                        frequency = self.get_pdf_keyword_frequency(metadata[entry]['keywords'], metadata[entry]['path']) #need to fix this
+                        frequency = self.get_pdf_keyword_frequency(metadata[entry]['keywords'], metadata[entry]['path'])
 
                     row = [metadata[entry]['id'], metadata[entry]['author'], metadata[entry]['title'], metadata[entry]['keywords'], frequency]
                     rows.append(row)
@@ -148,13 +147,21 @@ class PdfAnalyzer():
         else:
             pass
 
-class Display():
+class CsvDisplay():
     def __init__(self):
-        pass
+        self.csvs = os.listdir('data')
+
+    def pad_col(self, col, max_width):
+        return col.ljust(max_width)
+
+    def display_csv(self):
+
+        pd.set_option('max_colwidth', 1000)
+
+        df = pd.read_csv(os.path.join('data', max(self.csvs)), usecols = ['id','frequency'])
+        pd.options.display.max_columns = len(df.columns)
         
-    #df = pd.read_csv(file)
-    #pd.options.display.max_columns = len(df.columns)
-    #print(df)
+        print(tabulate(df, headers='keys', tablefmt='github'))
 
 def loop():
     operation = inquirer.select(
@@ -162,6 +169,7 @@ def loop():
         choices=[
             "Process PDF to Text",
             "Process Text to CSV",
+            "Cleanup PDFs and Texts",
             "Display CSV",
             Choice(value="Exit", name="Exit")
         ],
@@ -178,8 +186,24 @@ def loop():
         processor = PdfAnalyzer()
         processor.serialize_to_csv()
 
+    if operation == "Cleanup PDFs and Texts":
+        print("Moving PDF and Text files to processed direectories")
+
+        pdfs = os.listdir('pdfs')
+        texts = os.listdir('texts')
+
+        try:
+            for pdf in pdfs:
+                os.rename(os.path.join('pdfs', pdf), os.path.join('processed_pdfs', pdf))
+            
+            for text in texts:
+                os.rename(os.path.join('texts', text), os.path.join('processed_texts', text))
+        except Exception as e:
+           print(str(e))
+
     if operation == "Display CSV":
-        print("display it")
+        display = CsvDisplay()
+        display.display_csv()
 
     if operation == "Exit":
         quit()
